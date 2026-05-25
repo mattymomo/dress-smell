@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f0e8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Dress & Smell">
+  <meta name="description" content="Weather-based outfit and scent recommender.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>Dress &amp; Smell</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="app">
+
+    <header class="header">
+      <span class="logo-word">DRESS</span>
+      <em class="logo-amp">&amp;</em>
+      <span class="logo-word">SMELL</span>
+    </header>
+
+    <main class="main">
+
+      <!-- ── Initial ── -->
+      <section class="state" id="state-initial">
+        <p class="tagline"><em>Dress for the weather.<br>Smell like the season.</em></p>
+        <button class="btn-primary" id="btn-get">Get Today's Look</button>
+      </section>
+
+      <!-- ── Loading ── -->
+      <section class="state hidden" id="state-loading">
+        <p class="loading-text">
+          Reading the air<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+        </p>
+      </section>
+
+      <!-- ── City fallback ── -->
+      <section class="state hidden" id="state-city">
+        <p class="city-prompt"><em>Location access denied.<br>Enter your city to continue.</em></p>
+        <div class="city-field">
+          <input type="text" id="city-input" class="city-input" placeholder="City name"
+                 autocomplete="off" autocorrect="off" spellcheck="false">
+          <button class="btn-go" id="btn-city" aria-label="Search">→</button>
+        </div>
+        <p class="city-error hidden" id="city-error">City not found. Try again.</p>
+      </section>
+
+      <!-- ── Results ── -->
+      <section class="state hidden" id="state-results">
+
+        <div class="weather-strip">
+          <div class="weather-temp">
+            <span id="temp-val"></span><span class="temp-deg">°</span>
+          </div>
+          <div class="weather-right">
+            <div class="weather-condition" id="weather-cond"></div>
+            <div class="weather-sub">
+              <span id="humidity-val"></span>% humidity&thinsp;·&thinsp;<span id="wind-val"></span>&thinsp;km/h
+            </div>
+            <div class="weather-loc" id="weather-loc"></div>
+          </div>
+        </div>
+
+        <div class="panels">
+          <div class="panel">
+            <div class="panel-label">WEAR</div>
+            <div class="panel-main" id="rec-top"></div>
+            <div class="panel-sub" id="rec-bottom"></div>
+          </div>
+          <div class="panel-rule"></div>
+          <div class="panel">
+            <div class="panel-label">SMELL</div>
+            <div class="panel-main" id="rec-scent"></div>
+            <div class="panel-sub" id="rec-scent-sub"></div>
+          </div>
+        </div>
+
+        <div class="reasons">
+          <p class="reason"><em id="outfit-reason"></em></p>
+          <p class="reason"><em id="scent-reason"></em></p>
+        </div>
+
+        <div class="look-section">
+          <div class="section-label">THE LOOK</div>
+          <p class="look-text" id="look-text"></p>
+        </div>
+
+        <div class="wardrobe">
+          <div class="wardrobe-group">
+            <div class="section-label">TOPS</div>
+            <div class="pills" id="pills-tops"></div>
+          </div>
+          <div class="wardrobe-group">
+            <div class="section-label">BOTTOMS</div>
+            <div class="pills" id="pills-bottoms"></div>
+          </div>
+          <div class="wardrobe-group">
+            <div class="section-label">SCENTS</div>
+            <div class="pills" id="pills-scents"></div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <span class="footer-date" id="footer-date"></span>
+      <div class="footer-actions">
+        <button class="btn-back hidden" id="btn-back">← Back</button>
+        <button class="btn-refresh hidden" id="btn-refresh">Refresh</button>
+      </div>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
