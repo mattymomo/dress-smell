@@ -440,6 +440,22 @@ body {
   gap: 16px;
 }
 
+.btn-save {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--gold);
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  cursor: pointer;
+  padding: 0 0 3px;
+  transition: opacity 0.2s;
+}
+.btn-save:hover { opacity: 0.7; }
+
 .btn-back,
 .btn-refresh {
   background: none;

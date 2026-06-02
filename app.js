@@ -1,7 +1,26 @@
 'use strict';
 
-/* ─── Wardrobe — Tops ───────────────────────────────── */
-const TOPS = [
+/* ─── Firebase (CDN) ────────────────────────────────── */
+import { initializeApp }                                        from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, addDoc, getDocs,
+         onSnapshot, writeBatch, serverTimestamp }              from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// TODO: Replace with your Firebase project config.
+// Firebase Console → Project Settings → Your apps → Web → SDK setup & config
+const firebaseConfig = {
+  apiKey:            'YOUR_API_KEY',
+  authDomain:        'YOUR_PROJECT_ID.firebaseapp.com',
+  projectId:         'YOUR_PROJECT_ID',
+  storageBucket:     'YOUR_PROJECT_ID.appspot.com',
+  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
+  appId:             'YOUR_APP_ID',
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+
+/* ─── Default wardrobe (fallback + seed data) ───────── */
+const DEFAULT_TOPS = [
   { name: 'Light blue button-up',           warmth: 1, formality: 3, fabric: 'woven',  colorFamily: 'blue',  colorTemp: 'cool'    },
   { name: 'Black tee',                       warmth: 1, formality: 1, fabric: 'jersey', colorFamily: 'black', colorTemp: 'neutral' },
   { name: 'Dark green knit sweater',         warmth: 4, formality: 2, fabric: 'knit',   colorFamily: 'green', colorTemp: 'cool'    },
@@ -17,8 +36,7 @@ const TOPS = [
   { name: 'Light grey jacket',               warmth: 2, formality: 3, fabric: 'woven',  colorFamily: 'grey',  colorTemp: 'cool'    },
 ];
 
-/* ─── Wardrobe — Bottoms ────────────────────────────── */
-const BOTTOMS = [
+const DEFAULT_BOTTOMS = [
   { name: 'White linen pants',  warmth: 1, formality: 3, fabric: 'linen',  colorFamily: 'white', colorTemp: 'neutral' },
   { name: 'Blue linen pants',   warmth: 1, formality: 3, fabric: 'linen',  colorFamily: 'blue',  colorTemp: 'cool'    },
   { name: 'Beige shorts',       warmth: 0, formality: 1, fabric: 'cotton', colorFamily: 'beige', colorTemp: 'warm'    },
@@ -28,99 +46,57 @@ const BOTTOMS = [
   { name: 'Light blue jeans',   warmth: 2, formality: 1, fabric: 'denim',  colorFamily: 'blue',  colorTemp: 'cool'    },
 ];
 
-/* ─── Scents — with sourced fragrance data ──────────── */
-const SCENTS = [
+const DEFAULT_SCENTS = [
   {
-    name:      'Aesop Hwyl',
-    fmt:       'Eau de Parfum',
-    profile:   'incense & smoke',
-    notes:     'thyme, elemi, pink pepper · cypress, geranium · vetiver, frankincense, oakmoss',
+    name: 'Aesop Hwyl', fmt: 'Eau de Parfum', profile: 'incense & smoke',
+    notes: 'thyme, elemi, pink pepper · cypress, geranium · vetiver, frankincense, oakmoss',
     character: 'A Japanese forest after rain — temple smoke, damp earth, hinoki. Meditative and entirely singular.',
-    tempRange: ['cool', 'cold'],
-    conditions:['rain', 'cloudy', 'clear'],
-    registers: ['elevated', 'neutral'],
-    intensity: 4,
+    tempRange: ['cool','cold'], conditions: ['rain','cloudy','clear'], registers: ['elevated','neutral'], intensity: 4,
   },
   {
-    name:      'Aesop Karst',
-    fmt:       'Eau de Parfum',
-    profile:   'mineral & herb',
-    notes:     'juniper, bergamot, pink pepper · rosemary, sage, cumin · vetiver, sandalwood, cedar',
+    name: 'Aesop Karst', fmt: 'Eau de Parfum', profile: 'mineral & herb',
+    notes: 'juniper, bergamot, pink pepper · rosemary, sage, cumin · vetiver, sandalwood, cedar',
     character: 'Cliffside herbs and mineral sea air — juniper, sage, a quiet marine undertow. Grounded but restless.',
-    tempRange: ['mild', 'cool'],
-    conditions:['clear', 'cloudy'],
-    registers: ['elevated', 'neutral', 'relaxed'],
-    intensity: 3,
+    tempRange: ['mild','cool'], conditions: ['clear','cloudy'], registers: ['elevated','neutral','relaxed'], intensity: 3,
   },
   {
-    name:      'Byredo Super Cedar',
-    fmt:       'Eau de Parfum',
-    profile:   'clean cedar',
-    notes:     'rose · virginian cedar · haitian vetiver, musk',
+    name: 'Byredo Super Cedar', fmt: 'Eau de Parfum', profile: 'clean cedar',
+    notes: 'rose · virginian cedar · haitian vetiver, musk',
     character: 'The clean architecture of cedar — woody, minimal, almost structural. Like a freshly sharpened pencil in a cold room.',
-    tempRange: ['cool', 'cold'],
-    conditions:['clear', 'cloudy', 'rain'],
-    registers: ['elevated', 'neutral'],
-    intensity: 3,
+    tempRange: ['cool','cold'], conditions: ['clear','cloudy','rain'], registers: ['elevated','neutral'], intensity: 3,
   },
   {
-    name:      'Diptyque Eau des Sens',
-    fmt:       'Travel Spray',
-    profile:   'citrus & neroli',
-    notes:     'bitter orange, orange blossom · juniper berries · angelica, patchouli',
+    name: 'Diptyque Eau des Sens', fmt: 'Travel Spray', profile: 'citrus & neroli',
+    notes: 'bitter orange, orange blossom · juniper berries · angelica, patchouli',
     character: 'Bitter orange and neroli grounded by angelica — a Mediterranean afternoon distilled. Bright and precisely balanced.',
-    tempRange: ['hot', 'warm'],
-    conditions:['clear', 'cloudy'],
-    registers: ['elevated', 'neutral', 'relaxed'],
-    intensity: 2,
+    tempRange: ['hot','warm'], conditions: ['clear','cloudy'], registers: ['elevated','neutral','relaxed'], intensity: 2,
   },
   {
-    name:      'Diptyque Ilio',
-    fmt:       'Travel Spray',
-    profile:   'sun-warm floral',
-    notes:     'prickly pear, bergamot · iris, jasmine · musk',
+    name: 'Diptyque Ilio', fmt: 'Travel Spray', profile: 'sun-warm floral',
+    notes: 'prickly pear, bergamot · iris, jasmine · musk',
     character: 'Prickly pear and jasmine — light, sun-warm, unhurried. The smell of a perfect and uncomplicated afternoon.',
-    tempRange: ['hot', 'warm'],
-    conditions:['clear', 'cloudy'],
-    registers: ['relaxed', 'neutral'],
-    intensity: 2,
+    tempRange: ['hot','warm'], conditions: ['clear','cloudy'], registers: ['relaxed','neutral'], intensity: 2,
   },
   {
-    name:      'Diptyque Orphéon',
-    fmt:       'Travel Spray',
-    profile:   'powdery cedar',
-    notes:     'juniper berries · jasmine · cedar, tonka bean, musk',
+    name: 'Diptyque Orphéon', fmt: 'Travel Spray', profile: 'powdery cedar',
+    notes: 'juniper berries · jasmine · cedar, tonka bean, musk',
     character: 'Juniper and cedar softened with tonka — powdery, warm, the feeling of somewhere very considered. A 5-star lobby in scent form.',
-    tempRange: ['warm', 'mild', 'cool'],
-    conditions:['clear', 'cloudy', 'rain'],
-    registers: ['elevated'],
-    intensity: 3,
+    tempRange: ['warm','mild','cool'], conditions: ['clear','cloudy','rain'], registers: ['elevated'], intensity: 3,
   },
   {
-    name:      'Diptyque Do Son',
-    fmt:       'Travel Spray',
-    profile:   'tuberose',
-    notes:     'tuberose, orange leaf · pink pepper · musk, benzoin',
+    name: 'Diptyque Do Son', fmt: 'Travel Spray', profile: 'tuberose',
+    notes: 'tuberose, orange leaf · pink pepper · musk, benzoin',
     character: 'Tuberose at dusk — white, creamy, unapologetically floral. The scent of warm evenings and unhurried mornings.',
-    tempRange: ['warm', 'mild'],
-    conditions:['clear', 'cloudy'],
-    registers: ['relaxed', 'neutral', 'elevated'],
-    intensity: 3,
+    tempRange: ['warm','mild'], conditions: ['clear','cloudy'], registers: ['relaxed','neutral','elevated'], intensity: 3,
   },
   {
-    name:      'Diptyque Philosykos',
-    fmt:       'Travel Spray',
-    profile:   'fig & green',
-    notes:     'fig leaf, fig · green notes, coconut · fig tree, cedar',
+    name: 'Diptyque Philosykos', fmt: 'Travel Spray', profile: 'fig & green',
+    notes: 'fig leaf, fig · green notes, coconut · fig tree, cedar',
     character: 'A fig tree in full afternoon light — green leaf, creamy wood, faint sweetness of ripe fruit. Specific and unmistakable.',
-    tempRange: ['warm', 'mild'],
-    conditions:['clear', 'cloudy'],
-    registers: ['elevated', 'neutral', 'relaxed'],
-    intensity: 2,
+    tempRange: ['warm','mild'], conditions: ['clear','cloudy'], registers: ['elevated','neutral','relaxed'], intensity: 2,
   },
 ];
 
-/* ─── Outfit reasons ─────────────────────────────────── */
 const TOP_REASONS = {
   'Light blue button-up':           'A button-up collar elevates the temperature range without trying.',
   'Black tee':                      'Foundational and right — black works when nothing should compete.',
@@ -137,28 +113,70 @@ const TOP_REASONS = {
   'Light grey jacket':              'Wind calls for structure. The jacket does what a sweater cannot.',
 };
 
-/* ─── City register ──────────────────────────────────── */
-const ELEVATED_CITIES = [
-  'london','paris','milan','tokyo','new york','copenhagen','stockholm',
-  'amsterdam','zurich','geneva','vienna','berlin','seoul','singapore',
-  'hong kong','rome','florence','antwerp','oslo','edinburgh','kyoto',
-  'munich','melbourne','sydney','madrid','barcelona','lisbon',
-];
-const RELAXED_CITIES = [
-  'los angeles','miami','gold coast','bali','ibiza','san diego','honolulu',
-  'byron bay','marbella','cancun','tulum','bondi','malibu','santa monica',
-  'santa barbara','brisbane','perth','palm springs',
-];
+/* ─── Live wardrobe (replaced by Firestore when ready) ─ */
+let tops    = [...DEFAULT_TOPS];
+let bottoms = [...DEFAULT_BOTTOMS];
+let scents  = [...DEFAULT_SCENTS];
+
+async function seedIfEmpty(collectionName, data) {
+  const snap = await getDocs(collection(db, collectionName));
+  if (snap.empty) {
+    const batch = writeBatch(db);
+    data.forEach(item => batch.set(doc(collection(db, collectionName)), item));
+    await batch.commit();
+  }
+}
+
+async function initWardrobe() {
+  try {
+    await Promise.all([
+      seedIfEmpty('tops',    DEFAULT_TOPS),
+      seedIfEmpty('bottoms', DEFAULT_BOTTOMS),
+      seedIfEmpty('scents',  DEFAULT_SCENTS),
+    ]);
+    onSnapshot(collection(db, 'tops'),    s => { if (!s.empty) tops    = s.docs.map(d => ({ id: d.id, ...d.data() })); });
+    onSnapshot(collection(db, 'bottoms'), s => { if (!s.empty) bottoms = s.docs.map(d => ({ id: d.id, ...d.data() })); });
+    onSnapshot(collection(db, 'scents'),  s => { if (!s.empty) scents  = s.docs.map(d => ({ id: d.id, ...d.data() })); });
+  } catch (err) {
+    console.warn('Firestore unavailable, using defaults:', err.message);
+  }
+}
+
+/* ─── Firestore writes ──────────────────────────────── */
+async function logHistory(weather, rec) {
+  try {
+    await addDoc(collection(db, 'history'), {
+      top: rec.top, bottom: rec.bottom, scent: rec.scent.name,
+      weather: { temp: weather.temp, condition: weather.conditionLabel,
+                 humidity: weather.humidity, wind: weather.wind, location: weather.location },
+      date: serverTimestamp(),
+    });
+  } catch { /* non-critical */ }
+}
+
+async function saveLookbook(weather, rec) {
+  await addDoc(collection(db, 'lookbook'), {
+    top: rec.top, bottom: rec.bottom, scent: rec.scent.name,
+    profile: rec.scent.profile,
+    weather: { temp: weather.temp, condition: weather.conditionLabel, location: weather.location },
+    narrative: rec.narrative,
+    date: serverTimestamp(),
+  });
+}
+
+/* ─── City register ─────────────────────────────────── */
+const ELEVATED = ['london','paris','milan','tokyo','new york','copenhagen','stockholm','amsterdam','zurich','geneva','vienna','berlin','seoul','singapore','hong kong','rome','florence','antwerp','oslo','edinburgh','kyoto','munich','melbourne','sydney','madrid','barcelona','lisbon'];
+const RELAXED  = ['los angeles','miami','gold coast','bali','ibiza','san diego','honolulu','byron bay','marbella','cancun','tulum','bondi','malibu','santa monica','santa barbara','brisbane','perth','palm springs'];
 
 function getCityRegister(locationName) {
   if (!locationName) return 'neutral';
   const loc = locationName.toLowerCase();
-  if (ELEVATED_CITIES.some(c => loc.includes(c))) return 'elevated';
-  if (RELAXED_CITIES.some(c => loc.includes(c))) return 'relaxed';
+  if (ELEVATED.some(c => loc.includes(c))) return 'elevated';
+  if (RELAXED.some(c => loc.includes(c)))  return 'relaxed';
   return 'neutral';
 }
 
-/* ─── Selection helpers ──────────────────────────────── */
+/* ─── Rules engine ──────────────────────────────────── */
 function byFormality(pool, register) {
   const copy = [...pool];
   if (register === 'elevated') copy.sort((a, b) => b.formality - a.formality);
@@ -167,16 +185,10 @@ function byFormality(pool, register) {
 }
 
 function selectTop(temp, humidity, wind, condition, register) {
-  // Wind at cool temps → jacket
-  if (temp >= 8 && temp < 15 && wind > 25) {
-    return TOPS.find(t => t.name === 'Light grey jacket');
-  }
-
-  let pool = [...TOPS];
-
+  if (temp >= 8 && temp < 15 && wind > 25) return tops.find(t => t.name === 'Light grey jacket') ?? tops[0];
+  let pool = [...tops];
   if (temp >= 28) {
     pool = pool.filter(t => t.warmth === 1 && t.fabric === 'jersey');
-    if (humidity > 75) pool = pool.filter(t => t.colorTemp !== 'neutral' || t.colorFamily !== 'white');
   } else if (temp >= 22) {
     pool = pool.filter(t => t.warmth <= 2);
   } else if (temp >= 15) {
@@ -192,18 +204,14 @@ function selectTop(temp, humidity, wind, condition, register) {
   } else if (temp >= 8) {
     pool = pool.filter(t => t.warmth >= 3 && t.warmth <= 4);
   } else {
-    // Cold: acid-wash + knit only
-    pool = pool.filter(t =>
-      t.name === 'Dark green acid-wash sweatshirt' || t.name === 'Dark green knit sweater'
-    );
+    pool = pool.filter(t => t.name === 'Dark green acid-wash sweatshirt' || t.name === 'Dark green knit sweater');
+    if (!pool.length) pool = tops.filter(t => t.warmth >= 3);
   }
-
-  return byFormality(pool, register)[0] ?? TOPS[0];
+  return byFormality(pool, register)[0] ?? tops[0];
 }
 
 function selectBottom(temp, humidity, wind, condition, register) {
-  let pool = [...BOTTOMS];
-
+  let pool = [...bottoms];
   if (temp >= 28) {
     pool = pool.filter(b => b.warmth === 0);
   } else if (temp >= 22) {
@@ -219,36 +227,20 @@ function selectBottom(temp, humidity, wind, condition, register) {
       if (dark.length) pool = dark;
     }
   }
-
-  return byFormality(pool, register)[0] ?? BOTTOMS[0];
+  return byFormality(pool, register)[0] ?? bottoms[0];
 }
 
 function selectScent(temp, humidity, wind, condition, register) {
-  const tier = temp >= 28 ? 'hot'
-             : temp >= 22 ? 'warm'
-             : temp >= 15 ? 'mild'
-             : temp >= 8  ? 'cool'
-             : 'cold';
-
-  let pool = SCENTS.filter(s => s.tempRange.includes(tier));
-
-  if (condition === 'rain') {
-    const rainy = pool.filter(s => s.conditions.includes('rain'));
-    if (rainy.length) pool = rainy;
-  }
-
-  const byReg = pool.filter(s => s.registers.includes(register));
+  const tier = temp >= 28 ? 'hot' : temp >= 22 ? 'warm' : temp >= 15 ? 'mild' : temp >= 8 ? 'cool' : 'cold';
+  let pool = scents.filter(s => s.tempRange?.includes(tier));
+  if (!pool.length) pool = [...scents];
+  if (condition === 'rain') { const r = pool.filter(s => s.conditions?.includes('rain')); if (r.length) pool = r; }
+  const byReg = pool.filter(s => s.registers?.includes(register));
   if (byReg.length) pool = byReg;
-
-  if (wind > 25) {
-    const heavy = pool.filter(s => s.intensity >= 3);
-    if (heavy.length) pool = heavy;
-  }
-
-  return pool[0] ?? SCENTS[0];
+  if (wind > 25) { const h = pool.filter(s => s.intensity >= 3); if (h.length) pool = h; }
+  return pool[0] ?? scents[0];
 }
 
-/* ─── Narrative ──────────────────────────────────────── */
 const NARRATIVES = {
   hot_humid:   'The air is thick and the sun is relentless. Keep everything as light as possible — this is no day for layers or complexity.',
   hot_dry:     'There is a clean quality to this heat. The light is sharp, the air moves. Dress open and easy — precision over volume, always.',
@@ -267,7 +259,12 @@ const CITY_SUFFIX = {
   neutral:  ()   => '',
 };
 
-function getNarrative(temp, condition, wind, humidity, register, location) {
+function getRecommendation(temp, humidity, wind, condition, location) {
+  const register = getCityRegister(location);
+  const top      = selectTop(temp, humidity, wind, condition, register);
+  const bottom   = selectBottom(temp, humidity, wind, condition, register);
+  const sc       = selectScent(temp, humidity, wind, condition, register);
+
   let key;
   if      (temp >= 28) key = humidity > 75 ? 'hot_humid' : 'hot_dry';
   else if (temp >= 22) key = 'warm';
@@ -275,49 +272,55 @@ function getNarrative(temp, condition, wind, humidity, register, location) {
   else if (temp >= 8)  key = wind > 25 ? 'cool_wind' : 'cool';
   else                 key = 'cold';
 
-  const city   = location ? location.split(',')[0].trim() : null;
-  const suffix = city ? (CITY_SUFFIX[register] ?? CITY_SUFFIX.neutral)(city) : '';
-  return NARRATIVES[key] + suffix;
-}
-
-/* ─── Main recommendation ────────────────────────────── */
-function getRecommendation(temp, humidity, wind, condition, location) {
-  const register = getCityRegister(location);
-  const top      = selectTop(temp, humidity, wind, condition, register);
-  const bottom   = selectBottom(temp, humidity, wind, condition, register);
-  const sc       = selectScent(temp, humidity, wind, condition, register);
+  const city     = location ? location.split(',')[0].trim() : null;
+  const suffix   = city ? (CITY_SUFFIX[register] ?? CITY_SUFFIX.neutral)(city) : '';
 
   return {
-    top:          top.name,
-    bottom:       bottom.name,
-    scent:        sc,
+    top: top.name, bottom: bottom.name, scent: sc,
     outfitReason: TOP_REASONS[top.name] ?? '',
-    scentReason:  sc.character,
-    narrative:    getNarrative(temp, condition, wind, humidity, register, location),
-    register,
+    scentReason:  sc.character ?? '',
+    narrative:    NARRATIVES[key] + suffix,
   };
 }
 
-/* ─── WMO weather codes ─────────────────────────────── */
+/* ─── WMO codes ─────────────────────────────────────── */
 function getCondition(code) {
   if (code <= 1)                               return 'clear';
   if (code <= 3 || code === 45 || code === 48) return 'cloudy';
   if ([71,73,75,77,85,86].includes(code))      return 'snow';
   return 'rain';
 }
-
 function getConditionLabel(code) {
-  const map = {
-    0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
-    45:'Foggy', 48:'Icy fog',
-    51:'Light drizzle', 53:'Drizzle', 55:'Heavy drizzle',
-    61:'Light rain', 63:'Rain', 65:'Heavy rain',
-    71:'Light snow', 73:'Snow', 75:'Heavy snow', 77:'Snow grains',
-    80:'Rain showers', 81:'Rain showers', 82:'Heavy showers',
-    85:'Snow showers', 86:'Heavy snow showers',
-    95:'Thunderstorm', 96:'Thunderstorm', 99:'Thunderstorm',
-  };
-  return map[code] ?? 'Variable';
+  const m = {0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Rain showers',81:'Rain showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
+  return m[code] ?? 'Variable';
+}
+
+/* ─── Weather & geocoding ───────────────────────────── */
+async function fetchWeather(lat, lon) {
+  const res = await fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code` +
+    `&wind_speed_unit=kmh&temperature_unit=celsius`
+  );
+  if (!res.ok) throw new Error('Weather unavailable');
+  const { current: c } = await res.json();
+  return { temp: c.temperature_2m, humidity: c.relative_humidity_2m, wind: c.wind_speed_10m, condition: getCondition(c.weather_code), conditionLabel: getConditionLabel(c.weather_code) };
+}
+
+async function reverseGeocode(lat, lon) {
+  try {
+    const res  = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, { headers: { 'Accept-Language': 'en' } });
+    const data = await res.json();
+    return data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
+  } catch { return ''; }
+}
+
+async function geocodeCity(city) {
+  const res  = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
+  const data = await res.json();
+  if (!data.results?.length) throw new Error('City not found');
+  const r = data.results[0];
+  return { lat: r.latitude, lon: r.longitude, name: r.name + (r.country ? `, ${r.country}` : '') };
 }
 
 /* ─── DOM helpers ───────────────────────────────────── */
@@ -325,14 +328,11 @@ function showState(id) {
   for (const s of ['state-initial','state-loading','state-city','state-results']) {
     const el = document.getElementById(s);
     el.classList.toggle('hidden', s !== id);
-    if (s === id && s === 'state-results') {
-      el.style.animation = 'none';
-      el.offsetHeight;
-      el.style.animation = '';
-    }
+    if (s === id && s === 'state-results') { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; }
   }
   const onResults = id === 'state-results';
-  document.getElementById('btn-back').classList.toggle('hidden', !onResults);
+  document.getElementById('btn-save').classList.toggle('hidden',    !onResults);
+  document.getElementById('btn-back').classList.toggle('hidden',    !onResults);
   document.getElementById('btn-refresh').classList.toggle('hidden', !onResults);
 }
 
@@ -349,79 +349,40 @@ function renderPills(containerId, items, active) {
 }
 
 function renderResults(weather, rec) {
-  document.getElementById('temp-val').textContent      = Math.round(weather.temp);
-  document.getElementById('weather-cond').textContent  = weather.conditionLabel;
-  document.getElementById('humidity-val').textContent  = Math.round(weather.humidity);
-  document.getElementById('wind-val').textContent      = Math.round(weather.wind);
-  document.getElementById('weather-loc').textContent   = weather.location ?? '';
-
-  document.getElementById('rec-top').textContent       = rec.top;
-  document.getElementById('rec-bottom').textContent    = rec.bottom;
-  document.getElementById('rec-scent').textContent     = rec.scent.name;
-  document.getElementById('rec-scent-sub').textContent = `${rec.scent.fmt} · ${rec.scent.profile}`;
+  document.getElementById('temp-val').textContent        = Math.round(weather.temp);
+  document.getElementById('weather-cond').textContent    = weather.conditionLabel;
+  document.getElementById('humidity-val').textContent    = Math.round(weather.humidity);
+  document.getElementById('wind-val').textContent        = Math.round(weather.wind);
+  document.getElementById('weather-loc').textContent     = weather.location ?? '';
+  document.getElementById('rec-top').textContent         = rec.top;
+  document.getElementById('rec-bottom').textContent      = rec.bottom;
+  document.getElementById('rec-scent').textContent       = rec.scent.name;
+  document.getElementById('rec-scent-sub').textContent   = `${rec.scent.fmt} · ${rec.scent.profile}`;
   document.getElementById('rec-scent-notes').textContent = rec.scent.notes;
-
-  document.getElementById('outfit-reason').textContent = rec.outfitReason;
-  document.getElementById('scent-reason').textContent  = rec.scentReason;
-  document.getElementById('look-text').textContent     = rec.narrative;
-
-  renderPills('pills-tops',    TOPS,   rec.top);
-  renderPills('pills-bottoms', BOTTOMS, rec.bottom);
-  renderPills('pills-scents',  SCENTS,  rec.scent.name);
-}
-
-/* ─── API ───────────────────────────────────────────── */
-async function fetchWeather(lat, lon) {
-  const res = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-    `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code` +
-    `&wind_speed_unit=kmh&temperature_unit=celsius`
-  );
-  if (!res.ok) throw new Error('Weather unavailable');
-  const { current: c } = await res.json();
-  return {
-    temp:           c.temperature_2m,
-    humidity:       c.relative_humidity_2m,
-    wind:           c.wind_speed_10m,
-    condition:      getCondition(c.weather_code),
-    conditionLabel: getConditionLabel(c.weather_code),
-  };
-}
-
-async function reverseGeocode(lat, lon) {
-  try {
-    const res  = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`,
-      { headers: { 'Accept-Language': 'en' } }
-    );
-    const data = await res.json();
-    return data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
-  } catch { return ''; }
-}
-
-async function geocodeCity(city) {
-  const res  = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
-  );
-  const data = await res.json();
-  if (!data.results?.length) throw new Error('City not found');
-  const r = data.results[0];
-  return { lat: r.latitude, lon: r.longitude, name: r.name + (r.country ? `, ${r.country}` : '') };
+  document.getElementById('outfit-reason').textContent   = rec.outfitReason;
+  document.getElementById('scent-reason').textContent    = rec.scentReason;
+  document.getElementById('look-text').textContent       = rec.narrative;
+  renderPills('pills-tops',    tops,    rec.top);
+  renderPills('pills-bottoms', bottoms, rec.bottom);
+  renderPills('pills-scents',  scents,  rec.scent.name);
 }
 
 /* ─── Core run ──────────────────────────────────────── */
 let _lat = null, _lon = null, _locationName = '';
+let _weather = null, _rec = null;
 
 async function run(lat, lon, locationName) {
   _lat = lat; _lon = lon; _locationName = locationName;
   showState('state-loading');
   try {
     const weather = await fetchWeather(lat, lon);
-    if (!locationName) locationName = await reverseGeocode(lat, lon);
-    weather.location = locationName;
-    const rec = getRecommendation(weather.temp, weather.humidity, weather.wind, weather.condition, locationName);
+    const name    = locationName || await reverseGeocode(lat, lon);
+    weather.location = name;
+    const rec = getRecommendation(weather.temp, weather.humidity, weather.wind, weather.condition, name);
+    _weather = weather; _rec = rec;
     renderResults(weather, rec);
     showState('state-results');
+    logHistory(weather, rec); // fire-and-forget
   } catch (err) {
     console.error(err);
     showState('state-city');
@@ -431,7 +392,6 @@ async function run(lat, lon, locationName) {
   }
 }
 
-/* ─── City submit ───────────────────────────────────── */
 async function submitCity() {
   const city = document.getElementById('city-input').value.trim();
   if (!city) return;
@@ -440,13 +400,11 @@ async function submitCity() {
     const { lat, lon, name } = await geocodeCity(city);
     await run(lat, lon, name);
   } catch {
-    const errEl = document.getElementById('city-error');
-    errEl.textContent = 'City not found. Try again.';
-    errEl.classList.remove('hidden');
+    document.getElementById('city-error').textContent = 'City not found. Try again.';
+    document.getElementById('city-error').classList.remove('hidden');
   }
 }
 
-/* ─── Geolocation helper ────────────────────────────── */
 function fetchFromGeolocation() {
   if (!navigator.geolocation) { showState('state-city'); return; }
   showState('state-loading');
@@ -459,24 +417,18 @@ function fetchFromGeolocation() {
 
 /* ─── Init ──────────────────────────────────────────── */
 function init() {
-  const date = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  });
-  document.getElementById('footer-date').textContent = date.toUpperCase();
+  document.getElementById('footer-date').textContent = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  }).toUpperCase();
 
   // Auto-fetch if permission already granted
-  if (navigator.permissions) {
-    navigator.permissions.query({ name: 'geolocation' }).then(result => {
-      if (result.state === 'granted') fetchFromGeolocation();
-    });
-  }
+  navigator.permissions?.query({ name: 'geolocation' }).then(r => {
+    if (r.state === 'granted') fetchFromGeolocation();
+  });
 
   document.getElementById('btn-get').addEventListener('click', fetchFromGeolocation);
-
   document.getElementById('btn-city').addEventListener('click', submitCity);
-  document.getElementById('city-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') submitCity();
-  });
+  document.getElementById('city-input').addEventListener('keydown', e => e.key === 'Enter' && submitCity());
 
   document.getElementById('btn-back').addEventListener('click', () => {
     _lat = null; _lon = null; _locationName = '';
@@ -489,9 +441,22 @@ function init() {
     else showState('state-initial');
   });
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
+  document.getElementById('btn-save').addEventListener('click', async () => {
+    if (!_weather || !_rec) return;
+    const btn = document.getElementById('btn-save');
+    try {
+      await saveLookbook(_weather, _rec);
+      btn.textContent = 'Saved ✓';
+      setTimeout(() => { btn.textContent = 'Save Look'; }, 2000);
+    } catch {
+      btn.textContent = 'Error';
+      setTimeout(() => { btn.textContent = 'Save Look'; }, 2000);
+    }
+  });
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  initWardrobe(); // connect Firestore in background
 }
 
 document.addEventListener('DOMContentLoaded', init);
