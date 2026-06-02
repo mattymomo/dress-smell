@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Personal app — open for now, add auth rules later
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
