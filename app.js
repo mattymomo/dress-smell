@@ -8,12 +8,12 @@ import { getFirestore, collection, doc, addDoc, getDocs,
 // TODO: Replace with your Firebase project config.
 // Firebase Console → Project Settings → Your apps → Web → SDK setup & config
 const firebaseConfig = {
-  apiKey:            'YOUR_API_KEY',
-  authDomain:        'YOUR_PROJECT_ID.firebaseapp.com',
-  projectId:         'YOUR_PROJECT_ID',
-  storageBucket:     'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId:             'YOUR_APP_ID',
+  apiKey:            'AIzaSyA2NYBCrJFHCiGeNl_aGlo__xB_VKlBQos',
+  authDomain:        'dress-smell.firebaseapp.com',
+  projectId:         'dress-smell',
+  storageBucket:     'dress-smell.firebasestorage.app',
+  messagingSenderId: '764169894578',
+  appId:             '1:764169894578:web:8fee82e5e35ef35beca7ab',
 };
 
 const fbApp = initializeApp(firebaseConfig);
